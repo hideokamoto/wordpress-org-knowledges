@@ -50,11 +50,13 @@ function httpsGet(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const request = https.get(url, { timeout: REQUEST_TIMEOUT }, (response) => {
       if (response.statusCode === 404) {
+        response.resume(); // Consume response to free up socket
         reject(new Error(`Document not found (404): ${url}`));
         return;
       }
 
       if (response.statusCode && response.statusCode >= 400) {
+        response.resume(); // Consume response to free up socket
         reject(new Error(`HTTP error ${response.statusCode}: ${url}`));
         return;
       }
@@ -372,6 +374,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!rawSubtypes.every((s): s is string => typeof s === "string")) {
           throw new McpError(ErrorCode.InvalidParams, "subtypes must be an array of strings");
         }
+        // Validate each subtype value
+        const invalidSubtypes = rawSubtypes.filter((s) => !isValidSubtype(s));
+        if (invalidSubtypes.length > 0) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            `subtypes contain invalid value(s): ${invalidSubtypes.join(", ")}. Valid subtypes are: ${VALID_SUBTYPES.join(", ")}`
+          );
+        }
         subtypes = rawSubtypes;
       }
 
@@ -419,8 +429,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new McpError(ErrorCode.InvalidParams, "subtype is required and must be a string");
       }
 
-      if (!id || typeof id !== "number") {
+      // Validate subtype value
+      if (!isValidSubtype(subtype)) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          `Invalid subtype: ${subtype}. Valid subtypes are: ${VALID_SUBTYPES.join(", ")}`
+        );
+      }
+
+      if (id === undefined || id === null || typeof id !== "number") {
         throw new McpError(ErrorCode.InvalidParams, "id is required and must be a number");
+      }
+
+      // Validate id is a positive integer
+      if (!Number.isInteger(id) || id < 1) {
+        throw new McpError(ErrorCode.InvalidParams, "id must be a positive integer");
       }
 
       const content = await getWordPressDocContent(subtype, id);
