@@ -9,30 +9,6 @@ license: Apache-2.0
 metadata:
   author: hideokamoto
   version: "0.2.0"
-scripts:
-  search:
-    description: Search WordPress code reference by keywords
-    command: npx ts-node scripts/search.ts
-    args:
-      - name: query
-        description: Search keywords (required)
-        required: true
-      - name: subtypes
-        description: "Comma-separated types: wp-parser-function,wp-parser-hook,wp-parser-class,wp-parser-method"
-        required: false
-      - name: per_page
-        description: Number of results (1-100, default 5)
-        required: false
-  get_content:
-    description: Get details of a code reference entry
-    command: npx ts-node scripts/get_content.ts
-    args:
-      - name: subtype
-        description: Reference type from search results
-        required: true
-      - name: id
-        description: Document ID from search results
-        required: true
 ---
 
 # WordPress Code Reference Search Skill

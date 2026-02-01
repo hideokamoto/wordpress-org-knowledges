@@ -9,30 +9,6 @@ license: Apache-2.0
 metadata:
   author: hideokamoto
   version: "0.2.0"
-scripts:
-  search:
-    description: Search WordPress handbooks by keywords
-    command: npx ts-node scripts/search.ts
-    args:
-      - name: query
-        description: Search keywords (required)
-        required: true
-      - name: subtypes
-        description: "Comma-separated handbook types: plugin-handbook,theme-handbook,blocks-handbook,rest-api-handbook,apis-handbook,wpcs-handbook,adv-admin-handbook"
-        required: false
-      - name: per_page
-        description: Number of results (1-100, default 5)
-        required: false
-  get_content:
-    description: Get full content of a handbook document
-    command: npx ts-node scripts/get_content.ts
-    args:
-      - name: subtype
-        description: Handbook type from search results
-        required: true
-      - name: id
-        description: Document ID from search results
-        required: true
 ---
 
 # WordPress Handbook Search Skill
