@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: packages/mcp-wordpress-docs/package-lock.json
+
+      - name: Install MCP server dependencies
+        working-directory: packages/mcp-wordpress-docs
+        run: npm ci
+
+      - name: Build MCP server
+        working-directory: packages/mcp-wordpress-docs
+        run: npm run build
+
+      - name: Validate skills
+        run: |
+          for dir in skills/*/; do
+            if [ ! -f "${dir}SKILL.md" ]; then
+              echo "ERROR: SKILL.md missing in ${dir}"
+              exit 1
+            fi
+            echo "OK: ${dir}SKILL.md found"
+          done
+
+      - name: Validate powers
+        run: |
+          if [ ! -f "powers/wordpress-docs/POWER.md" ]; then
+            echo "ERROR: POWER.md missing in powers/wordpress-docs"
+            exit 1
+          fi
+          if [ ! -f "powers/wordpress-docs/mcp.json" ]; then
+            echo "ERROR: mcp.json missing in powers/wordpress-docs"
+            exit 1
+          fi
+          echo "OK: powers/wordpress-docs validation passed"

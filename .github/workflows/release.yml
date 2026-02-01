@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Install and build
+        working-directory: packages/mcp-wordpress-docs
+        run: |
+          npm ci
+          npm run build
+
+      - name: Publish to npm
+        working-directory: packages/mcp-wordpress-docs
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+        run: npm publish
+
+      - name: Package skills
+        run: |
+          python3 tools/package_skill.py skills/wordpress-handbook
+          python3 tools/package_skill.py skills/wordpress-code-reference
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/wordpress-handbook.skill
+            dist/wordpress-code-reference.skill

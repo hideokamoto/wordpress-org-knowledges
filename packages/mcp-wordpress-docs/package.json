@@ -1,0 +1,22 @@
+{
+  "name": "mcp-wordpress-docs",
+  "version": "0.1.0",
+  "description": "MCP server for searching and retrieving WordPress developer documentation",
+  "main": "dist/index.js",
+  "bin": {
+    "mcp-wordpress-docs": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "turndown": "^7.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/turndown": "^4.0.3",
+    "typescript": "^5.0.0"
+  }
+}

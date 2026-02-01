@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "wordpress-docs": {
+      "command": "npx",
+      "args": ["mcp-wordpress-docs"]
+    }
+  }
+}
