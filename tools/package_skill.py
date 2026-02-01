@@ -45,6 +45,17 @@ def package_skill(skill_dir: Path, output_path: Path) -> bool:
     with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for file_path in skill_dir.rglob('*'):
             if file_path.is_file():
+                resolved_file = file_path.resolve()
+                resolved_output = output_path.resolve()
+
+                # Skip the output file itself
+                if resolved_file == resolved_output:
+                    continue
+
+                # Skip files under the output file's parent directory
+                if resolved_output.parent in resolved_file.parents:
+                    continue
+
                 # Calculate the archive name (relative to skill_dir)
                 # This ensures SKILL.md is at the root of the archive
                 arcname = file_path.relative_to(skill_dir)

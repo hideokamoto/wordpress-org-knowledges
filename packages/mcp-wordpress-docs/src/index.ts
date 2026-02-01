@@ -357,11 +357,35 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     if (name === "search_wordpress_docs") {
       const query = args?.query as string;
-      const subtypes = args?.subtypes as string[] | undefined;
-      const perPage = (args?.per_page as number) || 5;
 
       if (!query || typeof query !== "string") {
         throw new McpError(ErrorCode.InvalidParams, "query is required and must be a string");
+      }
+
+      // Validate subtypes
+      const rawSubtypes = args?.subtypes;
+      let subtypes: string[] | undefined;
+      if (rawSubtypes !== undefined) {
+        if (!Array.isArray(rawSubtypes)) {
+          throw new McpError(ErrorCode.InvalidParams, "subtypes must be an array of strings");
+        }
+        if (!rawSubtypes.every((s): s is string => typeof s === "string")) {
+          throw new McpError(ErrorCode.InvalidParams, "subtypes must be an array of strings");
+        }
+        subtypes = rawSubtypes;
+      }
+
+      // Validate per_page
+      const rawPerPage = args?.per_page;
+      let perPage = 5;
+      if (rawPerPage !== undefined) {
+        if (typeof rawPerPage !== "number" || !Number.isFinite(rawPerPage)) {
+          throw new McpError(ErrorCode.InvalidParams, "per_page must be a finite number");
+        }
+        if (!Number.isInteger(rawPerPage) || rawPerPage < 1 || rawPerPage > 100) {
+          throw new McpError(ErrorCode.InvalidParams, "per_page must be an integer between 1 and 100");
+        }
+        perPage = rawPerPage;
       }
 
       const results = await searchWordPressDocs(query, subtypes, perPage);
@@ -371,7 +395,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: "text",
-              text: "検索結果が見つかりませんでした。別のキーワードで再検索してください。",
+              text: "No results found. Please try a different keyword.",
             },
           ],
         };
