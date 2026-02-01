@@ -1,6 +1,7 @@
 {
   "name": "mcp-wordpress-docs",
   "version": "0.1.0",
+  "license": "Apache-2.0",
   "description": "MCP server for searching and retrieving WordPress developer documentation",
   "main": "dist/index.js",
   "bin": {

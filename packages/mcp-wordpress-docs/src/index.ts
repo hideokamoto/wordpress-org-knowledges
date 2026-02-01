@@ -206,8 +206,11 @@ async function getWordPressDocContent(params: {
     }
 
     const errorDoc = result.data as ApiErrorResponse;
-    if (errorDoc.code === "rest_invalid_param") {
-      return `Invalid parameter error: ${errorDoc.message} (URL: ${url})`;
+    if (
+      typeof errorDoc.code === "string" ||
+      typeof errorDoc.message === "string"
+    ) {
+      return `WordPress API error [${errorDoc.code || "unknown"}]: ${errorDoc.message || "no message"} (URL: ${url})`;
     }
 
     const doc = result.data as HandbookDocument;
@@ -243,8 +246,11 @@ async function getWordPressDocContent(params: {
   }
 
   const errorDoc = result.data as ApiErrorResponse;
-  if (errorDoc.code === "rest_invalid_param") {
-    return `Invalid parameter error: ${errorDoc.message} (URL: ${url})`;
+  if (
+    typeof errorDoc.code === "string" ||
+    typeof errorDoc.message === "string"
+  ) {
+    return `WordPress API error [${errorDoc.code || "unknown"}]: ${errorDoc.message || "no message"} (URL: ${url})`;
   }
 
   const doc = result.data as CodeReferenceDocument;

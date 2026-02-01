@@ -30,15 +30,21 @@ _Provide step-by-step usage instructions._
 """
 
 
-def init_skill(name: str) -> str:
+def init_skill(name: str, force: bool = False) -> str:
     """Create a new skill directory with a template SKILL.md."""
     skill_dir = os.path.join("skills", name)
     os.makedirs(skill_dir, exist_ok=True)
 
+    skill_md_path = os.path.join(skill_dir, "SKILL.md")
+    if os.path.exists(skill_md_path) and not force:
+        raise FileExistsError(
+            f"SKILL.md already exists at {skill_md_path}. "
+            "Use --force to overwrite."
+        )
+
     title = name.replace("-", " ").title()
     skill_md = SKILL_TEMPLATE.format(name=name, title=title)
 
-    skill_md_path = os.path.join(skill_dir, "SKILL.md")
     with open(skill_md_path, "w") as f:
         f.write(skill_md)
 
@@ -52,9 +58,12 @@ def main():
     parser.add_argument(
         "name", help="Name of the skill (used as directory name)"
     )
+    parser.add_argument(
+        "--force", action="store_true", help="Overwrite existing SKILL.md"
+    )
     args = parser.parse_args()
 
-    skill_dir = init_skill(args.name)
+    skill_dir = init_skill(args.name, force=args.force)
     print(f"Initialized skill at: {skill_dir}")
 
 
