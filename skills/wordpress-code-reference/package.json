@@ -1,0 +1,14 @@
+{
+  "name": "wordpress-code-reference-skill",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "search": "ts-node scripts/search.ts",
+    "get-content": "ts-node scripts/get_content.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
+  }
+}

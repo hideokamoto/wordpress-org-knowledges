@@ -5,30 +5,66 @@ description: >
   Use when the developer asks about specific WordPress functions, actions,
   filters, or class implementations. Provides API signatures, descriptions,
   version information, and source file locations.
-  Requires mcp-wordpress-docs MCP server.
 license: Apache-2.0
 metadata:
   author: hideokamoto
-  version: "0.1.0"
+  version: "0.2.0"
+scripts:
+  search:
+    description: Search WordPress code reference by keywords
+    command: npx ts-node scripts/search.ts
+    args:
+      - name: query
+        description: Search keywords (required)
+        required: true
+      - name: subtypes
+        description: "Comma-separated types: wp-parser-function,wp-parser-hook,wp-parser-class,wp-parser-method"
+        required: false
+      - name: per_page
+        description: Number of results (1-100, default 5)
+        required: false
+  get_content:
+    description: Get details of a code reference entry
+    command: npx ts-node scripts/get_content.ts
+    args:
+      - name: subtype
+        description: Reference type from search results
+        required: true
+      - name: id
+        description: Document ID from search results
+        required: true
 ---
 
 # WordPress Code Reference Search Skill
 
 This skill enables searching and retrieving information from the WordPress Code Reference.
 
-## Prerequisites
+## Available Scripts
 
-The `mcp-wordpress-docs` MCP server must be connected.
+### search
 
-**Installation:**
+Search code references by keywords.
+
 ```bash
-claude mcp add wordpress-docs npx -- -y mcp-wordpress-docs
+npx ts-node scripts/search.ts "register_post_type" "wp-parser-function" 5
 ```
 
-## Available Tools
+**Arguments:**
+- `query` (required): Search keywords
+- `subtypes` (optional): Comma-separated list of reference types
+- `per_page` (optional): Number of results (default: 5)
 
-- **search_wordpress_docs**: Search code references by keywords
-- **get_wordpress_doc_content**: Retrieve details of a specific function/hook/class/method
+### get_content
+
+Retrieve details of a specific code reference entry.
+
+```bash
+npx ts-node scripts/get_content.ts wp-parser-function 12345
+```
+
+**Arguments:**
+- `subtype` (required): Reference type from search results
+- `id` (required): Document ID from search results
 
 ## Available Code Reference Types
 
@@ -41,7 +77,7 @@ claude mcp add wordpress-docs npx -- -y mcp-wordpress-docs
 
 ## Important Constraint
 
-Code references do **not** have a `content` field. The `get_wordpress_doc_content` tool returns:
+Code references do **not** have full content. The `get_content` script returns:
 
 - **excerpt**: Description/summary of the function/hook/class/method
 - **since**: WordPress version when this API was introduced
@@ -49,41 +85,45 @@ Code references do **not** have a `content` field. The `get_wordpress_doc_conten
 
 For full source code, direct the user to the returned URL.
 
-## Usage Instructions
+## Usage Workflow
 
 ### Step 1: Search for Code Reference
 
-Use `search_wordpress_docs` with code reference subtypes:
+Run the search script:
 
-```json
-{
-  "query": "register_post_type",
-  "subtypes": ["wp-parser-function"],
-  "per_page": 5
-}
+```bash
+npx ts-node scripts/search.ts "add_action" "wp-parser-function,wp-parser-hook" 5
 ```
 
-### Step 2: Retrieve Details
-
-Use `get_wordpress_doc_content` with the ID and subtype from search results:
-
+Output:
 ```json
-{
-  "subtype": "wp-parser-function",
-  "id": 12345
-}
+[
+  {
+    "id": 12345,
+    "title": "add_action()",
+    "url": "https://developer.wordpress.org/reference/functions/add_action/",
+    "subtype": "wp-parser-function"
+  }
+]
 ```
 
-### Response Format
+### Step 2: Get Details
 
+Use the ID and subtype from search results:
+
+```bash
+npx ts-node scripts/get_content.ts wp-parser-function 12345
+```
+
+Output:
 ```json
 {
   "id": 12345,
-  "title": "register_post_type()",
-  "url": "https://developer.wordpress.org/reference/functions/register_post_type/",
-  "excerpt": "Registers a post type...",
-  "since": "2.9.0",
-  "source_file": "wp-includes/post.php"
+  "title": "add_action()",
+  "url": "https://developer.wordpress.org/reference/functions/add_action/",
+  "excerpt": "Adds a callback function to an action hook.",
+  "since": "1.2.0",
+  "source_file": "wp-includes/plugin.php"
 }
 ```
 
@@ -93,7 +133,7 @@ Use `get_wordpress_doc_content` with the ID and subtype from search results:
 - **Find hooks (actions/filters)**: Use `wp-parser-hook` subtype
 - **Find classes**: Use `wp-parser-class` subtype
 - **Find methods**: Use `wp-parser-method` subtype
-- **Combined search**: Specify multiple subtypes to search across types
+- **Combined search**: Specify multiple subtypes (comma-separated)
 
 ## Example Queries
 
@@ -105,6 +145,8 @@ Use `get_wordpress_doc_content` with the ID and subtype from search results:
 
 ## When to Direct Users to URL
 
-- When full source code is needed
-- When looking for usage examples in core
-- When checking all parameters and return values in detail
+Always provide the URL when:
+- User needs full parameter documentation
+- User wants to see usage examples from core
+- User needs return value details
+- User wants to see the actual source code
