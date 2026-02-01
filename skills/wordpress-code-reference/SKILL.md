@@ -8,7 +8,7 @@ description: >
 license: Apache-2.0
 metadata:
   author: hideokamoto
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # WordPress Code Reference Search Skill
@@ -22,7 +22,7 @@ This skill enables searching and retrieving information from the WordPress Code 
 Search code references by keywords.
 
 ```bash
-npx ts-node scripts/search.ts "register_post_type" "wp-parser-function" 5
+python3 search.py "register_post_type" "wp-parser-function" 5
 ```
 
 **Arguments:**
@@ -35,7 +35,7 @@ npx ts-node scripts/search.ts "register_post_type" "wp-parser-function" 5
 Retrieve details of a specific code reference entry.
 
 ```bash
-npx ts-node scripts/get_content.ts wp-parser-function 12345
+python3 get_content.py wp-parser-function 12345
 ```
 
 **Arguments:**
@@ -68,7 +68,7 @@ For full source code, direct the user to the returned URL.
 Run the search script:
 
 ```bash
-npx ts-node scripts/search.ts "add_action" "wp-parser-function,wp-parser-hook" 5
+python3 search.py "add_action" "wp-parser-function,wp-parser-hook" 5
 ```
 
 Output:
@@ -88,7 +88,7 @@ Output:
 Use the ID and subtype from search results:
 
 ```bash
-npx ts-node scripts/get_content.ts wp-parser-function 12345
+python3 get_content.py wp-parser-function 12345
 ```
 
 Output:
@@ -113,11 +113,11 @@ Output:
 
 ## Example Queries
 
-1. "wp_insert_post function" → Search `wp-parser-function`
-2. "init action hook" → Search `wp-parser-hook`
-3. "the_content filter" → Search `wp-parser-hook`
-4. "WP_Query class" → Search `wp-parser-class`
-5. "query method" → Search `wp-parser-method`
+1. "wp_insert_post function" -> Search `wp-parser-function`
+2. "init action hook" -> Search `wp-parser-hook`
+3. "the_content filter" -> Search `wp-parser-hook`
+4. "WP_Query class" -> Search `wp-parser-class`
+5. "query method" -> Search `wp-parser-method`
 
 ## When to Direct Users to URL
 

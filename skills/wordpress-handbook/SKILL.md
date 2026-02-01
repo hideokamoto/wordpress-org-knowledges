@@ -8,7 +8,7 @@ description: >
 license: Apache-2.0
 metadata:
   author: hideokamoto
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # WordPress Handbook Search Skill
@@ -22,7 +22,7 @@ This skill enables searching and retrieving content from WordPress official deve
 Search handbooks by keywords.
 
 ```bash
-npx ts-node scripts/search.ts "custom post type" "plugin-handbook,theme-handbook" 10
+python3 search.py "custom post type" "plugin-handbook,theme-handbook" 10
 ```
 
 **Arguments:**
@@ -35,7 +35,7 @@ npx ts-node scripts/search.ts "custom post type" "plugin-handbook,theme-handbook
 Retrieve full content of a specific document.
 
 ```bash
-npx ts-node scripts/get_content.ts plugin-handbook 11070
+python3 get_content.py plugin-handbook 11070
 ```
 
 **Arguments:**
@@ -61,7 +61,7 @@ npx ts-node scripts/get_content.ts plugin-handbook 11070
 Run the search script with your query:
 
 ```bash
-npx ts-node scripts/search.ts "register post type" "plugin-handbook" 5
+python3 search.py "register post type" "plugin-handbook" 5
 ```
 
 Output:
@@ -81,7 +81,7 @@ Output:
 Use the ID and subtype from the search results:
 
 ```bash
-npx ts-node scripts/get_content.ts plugin-handbook 11070
+python3 get_content.py plugin-handbook 11070
 ```
 
 The content is returned in Markdown format for easy reading.
@@ -94,8 +94,8 @@ The content is returned in Markdown format for easy reading.
 
 ## Example Queries
 
-1. "How to register a custom post type" → Search `plugin-handbook`
-2. "Theme template hierarchy" → Search `theme-handbook`
-3. "Create a custom block" → Search `blocks-handbook`
-4. "REST API authentication" → Search `rest-api-handbook`
-5. "WordPress coding standards for PHP" → Search `wpcs-handbook`
+1. "How to register a custom post type" -> Search `plugin-handbook`
+2. "Theme template hierarchy" -> Search `theme-handbook`
+3. "Create a custom block" -> Search `blocks-handbook`
+4. "REST API authentication" -> Search `rest-api-handbook`
+5. "WordPress coding standards for PHP" -> Search `wpcs-handbook`

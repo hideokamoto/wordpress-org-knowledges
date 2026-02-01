@@ -38,6 +38,16 @@ jobs:
             echo "✓ ${skill_dir}SKILL.md exists"
           done
 
+      - name: Validate skill scripts (Python syntax check)
+        run: |
+          echo "Checking Python syntax..."
+          for skill_dir in skills/wordpress-handbook skills/wordpress-code-reference; do
+            for script in "${skill_dir}"/*.py; do
+              python3 -m py_compile "$script"
+              echo "✓ $script syntax OK"
+            done
+          done
+
       - name: Validate power structure
         run: |
           echo "Validating powers..."
