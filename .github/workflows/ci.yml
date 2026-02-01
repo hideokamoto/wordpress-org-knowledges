@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: packages/mcp-wordpress-docs/package-lock.json
+
+      - name: Install MCP server dependencies
+        working-directory: packages/mcp-wordpress-docs
+        run: npm ci
+
+      - name: Build MCP server
+        working-directory: packages/mcp-wordpress-docs
+        run: npm run build
+
+      - name: Validate skills structure
+        run: |
+          echo "Validating skills..."
+          for skill_dir in skills/*/; do
+            if [ ! -f "${skill_dir}SKILL.md" ]; then
+              echo "ERROR: SKILL.md not found in $skill_dir"
+              exit 1
+            fi
+            echo "✓ ${skill_dir}SKILL.md exists"
+          done
+
+      - name: Validate power structure
+        run: |
+          echo "Validating powers..."
+          if [ ! -f "powers/wordpress-docs/POWER.md" ]; then
+            echo "ERROR: POWER.md not found"
+            exit 1
+          fi
+          echo "✓ powers/wordpress-docs/POWER.md exists"
+
+          if [ ! -f "powers/wordpress-docs/mcp.json" ]; then
+            echo "ERROR: mcp.json not found"
+            exit 1
+          fi
+          echo "✓ powers/wordpress-docs/mcp.json exists"
+
+          if [ ! -d "powers/wordpress-docs/steering" ]; then
+            echo "ERROR: steering directory not found"
+            exit 1
+          fi
+          echo "✓ powers/wordpress-docs/steering exists"
+
+      - name: Validate mcp.json syntax
+        run: |
+          echo "Validating mcp.json..."
+          python3 -c "import json; json.load(open('powers/wordpress-docs/mcp.json'))"
+          echo "✓ mcp.json is valid JSON"

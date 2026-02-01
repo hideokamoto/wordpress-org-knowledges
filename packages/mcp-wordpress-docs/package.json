@@ -1,0 +1,37 @@
+{
+  "name": "mcp-wordpress-docs",
+  "version": "0.1.0",
+  "description": "MCP server for searching WordPress developer documentation",
+  "main": "dist/index.js",
+  "bin": {
+    "mcp-wordpress-docs": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "turndown": "^7.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/turndown": "^5.0.5",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hideokamoto/wordpress-org-knowledges"
+  },
+  "keywords": [
+    "mcp",
+    "wordpress",
+    "documentation",
+    "model-context-protocol"
+  ]
+}
