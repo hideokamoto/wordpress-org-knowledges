@@ -56,6 +56,10 @@ def package_skill(skill_dir: Path, output_path: Path) -> bool:
                 if resolved_output.parent in resolved_file.parents:
                     continue
 
+                # Skip node_modules
+                if 'node_modules' in file_path.parts:
+                    continue
+
                 # Calculate the archive name (relative to skill_dir)
                 # This ensures SKILL.md is at the root of the archive
                 arcname = file_path.relative_to(skill_dir)

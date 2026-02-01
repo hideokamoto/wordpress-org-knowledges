@@ -9,7 +9,7 @@ This monorepo provides tools for AI agents to search and retrieve content from t
 ### Components
 
 - **mcp-wordpress-docs**: MCP server that provides search and content retrieval tools
-- **Agent Skills**: Instruction files for Claude Code and similar AI assistants
+- **Agent Skills**: Python scripts for Claude Code and similar AI assistants
 - **Kiro Power**: Integration for Kiro IDE
 
 ## Quick Start
@@ -76,9 +76,15 @@ Retrieve full content of a specific document.
 wordpress-skills/
 ├── packages/
 │   └── mcp-wordpress-docs/      # MCP server (TypeScript)
-├── skills/                       # Agent Skills
+├── skills/                       # Agent Skills (Python)
 │   ├── wordpress-handbook/
+│   │   ├── SKILL.md
+│   │   ├── search.py
+│   │   └── get_content.py
 │   └── wordpress-code-reference/
+│       ├── SKILL.md
+│       ├── search.py
+│       └── get_content.py
 ├── powers/                       # Kiro Power
 │   └── wordpress-docs/
 └── tools/                        # Build utilities
@@ -104,10 +110,27 @@ claude mcp add wordpress-docs node -- /path/to/packages/mcp-wordpress-docs/dist/
 # Ask: "Search for register_post_type in the plugin handbook"
 ```
 
+### Testing Skills
+
+Skills are Python scripts that require no build step:
+
+```bash
+# Search handbooks
+python3 skills/wordpress-handbook/search.py "custom post type" "plugin-handbook" 5
+
+# Get content
+python3 skills/wordpress-handbook/get_content.py plugin-handbook 11067
+
+# Search code reference
+python3 skills/wordpress-code-reference/search.py "add_action" "wp-parser-function" 5
+```
+
 ### Packaging Skills
 
 ```bash
-python tools/package_skill.py skills/wordpress-handbook --output dist/wordpress-handbook.skill
+# Package as .skill archives (no build step required)
+python3 tools/package_skill.py skills/wordpress-handbook --output dist/wordpress-handbook.skill
+python3 tools/package_skill.py skills/wordpress-code-reference --output dist/wordpress-code-reference.skill
 ```
 
 ## License
