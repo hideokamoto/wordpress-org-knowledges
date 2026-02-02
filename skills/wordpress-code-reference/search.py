@@ -89,7 +89,15 @@ def main():
 
     query = args[0]
     subtypes = [s.strip() for s in args[1].split(",")] if len(args) > 1 else None
-    per_page = int(args[2]) if len(args) > 2 else 5
+
+    if len(args) > 2:
+        try:
+            per_page = int(args[2])
+        except ValueError:
+            print(f"Error: per_page must be an integer, got '{args[2]}'", file=sys.stderr)
+            sys.exit(1)
+    else:
+        per_page = 5
 
     try:
         results = search_code_reference(query, subtypes, per_page)
