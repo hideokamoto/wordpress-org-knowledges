@@ -369,10 +369,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       let subtypes: string[] | undefined;
       if (rawSubtypes !== undefined) {
         if (!Array.isArray(rawSubtypes)) {
-          throw new McpError(ErrorCode.InvalidParams, "subtypes must be an array of strings");
-        }
-        if (!rawSubtypes.every((s): s is string => typeof s === "string")) {
-          throw new McpError(ErrorCode.InvalidParams, "subtypes must be an array of strings");
+          throw new McpError(ErrorCode.InvalidParams, "subtypes must be an array");
         }
         // Validate each subtype value
         const invalidSubtypes = rawSubtypes.filter((s) => !isValidSubtype(s));
