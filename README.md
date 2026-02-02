@@ -135,4 +135,4 @@ python3 tools/package_skill.py skills/wordpress-code-reference --output dist/wor
 
 ## License
 
-Apache-2.0
+MIT
