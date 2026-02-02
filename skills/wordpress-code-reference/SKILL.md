@@ -5,7 +5,7 @@ description: >
   Use when the developer asks about specific WordPress functions, actions,
   filters, or class implementations. Provides API signatures, descriptions,
   version information, and source file locations.
-license: Apache-2.0
+license: MIT
 metadata:
   author: hideokamoto
   version: "0.3.0"

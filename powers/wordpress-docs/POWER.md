@@ -6,6 +6,7 @@ description: >
   developer.wordpress.org REST API. Covers plugin development,
   theme development, block editor, REST API, coding standards,
   and function/hook/class references.
+license: MIT
 keywords:
   - "wordpress"
   - "wp plugin"

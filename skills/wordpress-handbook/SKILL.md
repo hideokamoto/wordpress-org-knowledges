@@ -5,7 +5,7 @@ description: >
   Common APIs, Coding Standards, and Advanced Administration handbooks.
   Use when the developer asks about WordPress development concepts,
   best practices, coding standards, or architecture guidelines.
-license: Apache-2.0
+license: MIT
 metadata:
   author: hideokamoto
   version: "0.3.0"

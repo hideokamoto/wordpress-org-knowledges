@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "wordpress-docs": {
+      "command": "node",
+      "args": [
+        "/Users/okamotohidetaka/development/oss/wordpress-org-knowledges/packages/mcp-wordpress-docs/dist/index.js"
+      ],
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
