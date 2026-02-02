@@ -90,11 +90,15 @@ def main():
     query = args[0]
     subtypes = [s.strip() for s in args[1].split(",")] if len(args) > 1 else None
 
+    # Parse per_page with error handling
     if len(args) > 2:
         try:
             per_page = int(args[2])
+            if not (1 <= per_page <= 100):
+                print("Error: per_page must be between 1 and 100", file=sys.stderr)
+                sys.exit(1)
         except ValueError:
-            print(f"Error: per_page must be an integer, got '{args[2]}'", file=sys.stderr)
+            print("Error: per_page must be an integer", file=sys.stderr)
             sys.exit(1)
     else:
         per_page = 5
