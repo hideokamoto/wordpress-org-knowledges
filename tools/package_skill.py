@@ -38,22 +38,34 @@ def package_skill(skill_dir: Path, output_path: Path) -> bool:
     if not validate_skill_directory(skill_dir):
         return False
 
+    # Resolve both paths to handle symlinks and relative paths
+    resolved_skill_dir = skill_dir.resolve()
+    resolved_output_path = output_path.resolve()
+
+    # Validate that output path is not inside the skill directory
+    try:
+        resolved_output_path.relative_to(resolved_skill_dir)
+        # If we get here, output_path is inside skill_dir, which is an error
+        print(
+            f"ERROR: Output path must not be inside the skill directory.\n"
+            f"  Skill directory: {resolved_skill_dir}\n"
+            f"  Output path: {resolved_output_path}",
+            file=sys.stderr
+        )
+        return False
+    except ValueError:
+        # This is expected - output_path is not inside skill_dir
+        pass
+
     # Ensure output directory exists
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Create the zip archive
-    with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for file_path in skill_dir.rglob('*'):
+    with zipfile.ZipFile(resolved_output_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for file_path in resolved_skill_dir.rglob('*'):
             if file_path.is_file():
-                resolved_file = file_path.resolve()
-                resolved_output = output_path.resolve()
-
                 # Skip the output file itself
-                if resolved_file == resolved_output:
-                    continue
-
-                # Skip files under the output file's parent directory
-                if resolved_output.parent in resolved_file.parents:
+                if file_path == resolved_output_path:
                     continue
 
                 # Skip node_modules
@@ -62,7 +74,7 @@ def package_skill(skill_dir: Path, output_path: Path) -> bool:
 
                 # Calculate the archive name (relative to skill_dir)
                 # This ensures SKILL.md is at the root of the archive
-                arcname = file_path.relative_to(skill_dir)
+                arcname = file_path.relative_to(resolved_skill_dir)
                 zipf.write(file_path, arcname)
                 print(f"  Added: {arcname}")
 
