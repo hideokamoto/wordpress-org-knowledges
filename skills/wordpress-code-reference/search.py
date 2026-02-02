@@ -63,7 +63,8 @@ def search_code_reference(
         raise RuntimeError(f"Network error: {e.reason}") from e
 
     if not isinstance(data, list):
-        raise RuntimeError(data.get("message", "Unexpected API response"))
+        error_msg = data.get("message", "Unexpected API response") if isinstance(data, dict) else "Unexpected API response"
+        raise RuntimeError(error_msg)
 
     return [
         {
