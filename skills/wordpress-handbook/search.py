@@ -64,7 +64,10 @@ def search_handbooks(query: str, subtypes: Optional[List[str]] = None, per_page:
         raise RuntimeError(f"Network error: {e.reason}") from e
 
     if not isinstance(data, list):
-        raise RuntimeError(data.get("message", "Unexpected API response"))
+        error_message = "Unexpected API response"
+        if isinstance(data, dict):
+            error_message = data.get("message", error_message)
+        raise RuntimeError(error_message)
 
     return [
         {

@@ -68,6 +68,9 @@ function httpsGet(url: string): Promise<string> {
       response.on("end", () => {
         resolve(data);
       });
+      response.on("error", (error) => {
+        reject(new Error(`Stream error: ${error.message} (${url})`));
+      });
     });
 
     request.on("error", (error) => {
