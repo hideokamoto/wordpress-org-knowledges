@@ -403,17 +403,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       const results = await searchWordPressDocs(query, subtypes, perPage);
 
-      if (results.length === 0) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: "No results found. Please try a different keyword.",
-            },
-          ],
-        };
-      }
-
       return {
         content: [
           {
