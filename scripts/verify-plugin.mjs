@@ -100,7 +100,7 @@ for (const [serverName, config] of servers) {
       const searchText = /** @type {{ text: string }[]} */ (search.content)[0]?.text ?? "";
       check(!search.isError, `search_wordpress_docs returns results: ${searchText.slice(0, 120)}`);
 
-      const [first] = JSON.parse(searchText);
+      const [first] = search.isError ? [] : JSON.parse(searchText);
       if (first) {
         const doc = await client.callTool({
           name: "get_wordpress_doc_content",

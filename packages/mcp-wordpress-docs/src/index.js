@@ -61,37 +61,81 @@ const turndownService = new TurndownService({
   codeBlockStyle: "fenced",
 });
 
+const USER_AGENT = `${packageJson.name}/${packageJson.version} (+https://github.com/hideokamoto/wordpress-org-knowledges)`;
+const MAX_RETRIES = 2;
+const MAX_RETRY_DELAY = 5000;
+
 /**
- * HTTP GET helper.
+ * Thrown when developer.wordpress.org answers 429 or 503, which are worth
+ * trying again after a short wait.
+ */
+class RetryableHttpError extends Error {
+  /** @param {string} message @param {number} delay */
+  constructor(message, delay) {
+    super(message);
+    this.delay = delay;
+  }
+}
+
+/**
+ * @param {string | string[] | undefined} header
+ * @param {number} fallback
+ * @returns {number}
+ */
+function retryDelay(header, fallback) {
+  const seconds = Number(Array.isArray(header) ? header[0] : header);
+  const delay = Number.isFinite(seconds) && seconds >= 0 ? seconds * 1000 : fallback;
+  return Math.min(delay, MAX_RETRY_DELAY);
+}
+
+/**
+ * One HTTP GET request.
  * @param {string} url
+ * @param {number} attempt
  * @returns {Promise<string>}
  */
-function httpsGet(url) {
+function httpsGetOnce(url, attempt) {
   return new Promise((resolve, reject) => {
-    const request = https.get(url, { timeout: REQUEST_TIMEOUT }, (response) => {
-      if (response.statusCode === 404) {
-        response.resume(); // Consume response to free up socket
-        reject(new Error(`Document not found (404): ${url}`));
-        return;
-      }
+    const request = https.get(
+      url,
+      { timeout: REQUEST_TIMEOUT, headers: { "User-Agent": USER_AGENT, Accept: "application/json" } },
+      (response) => {
+        const status = response.statusCode ?? 0;
+        if (status === 404) {
+          response.resume(); // Consume response to free up socket
+          reject(new Error(`Document not found (404): ${url}`));
+          return;
+        }
 
-      if (response.statusCode && response.statusCode >= 400) {
-        response.resume(); // Consume response to free up socket
-        reject(new Error(`HTTP error ${response.statusCode}: ${url}`));
-        return;
-      }
+        if (status === 429 || status === 503) {
+          response.resume();
+          reject(
+            new RetryableHttpError(
+              `HTTP error ${status}: developer.wordpress.org is limiting requests, try again later: ${url}`,
+              retryDelay(response.headers["retry-after"], 1000 * 2 ** attempt)
+            )
+          );
+          return;
+        }
 
-      let data = "";
-      response.on("data", (chunk) => {
-        data += chunk;
-      });
-      response.on("end", () => {
-        resolve(data);
-      });
-      response.on("error", (error) => {
-        reject(new Error(`Stream error: ${error.message} (${url})`));
-      });
-    });
+        if (status >= 400) {
+          response.resume(); // Consume response to free up socket
+          reject(new Error(`HTTP error ${status}: ${url}`));
+          return;
+        }
+
+        let data = "";
+        response.on("data", (chunk) => {
+          data += chunk;
+        });
+        response.on("end", () => {
+          resolve(data);
+        });
+        response.on("error", (error) => {
+          reject(new Error(`Stream error: ${error.message} (${url})`));
+        });
+      }
+    );
 
     request.on("error", (error) => {
       reject(new Error(`Network error: ${error.message} (${url})`));
@@ -102,6 +146,22 @@ function httpsGet(url) {
       reject(new Error(`Request timeout after ${REQUEST_TIMEOUT}ms: ${url}`));
     });
   });
+}
+
+/**
+ * HTTP GET helper. Retries a 429 or 503 answer up to MAX_RETRIES times.
+ * @param {string} url
+ * @returns {Promise<string>}
+ */
+async function httpsGet(url) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await httpsGetOnce(url, attempt);
+    } catch (error) {
+      if (!(error instanceof RetryableHttpError) || attempt >= MAX_RETRIES) throw error;
+      await new Promise((resolve) => setTimeout(resolve, error.delay));
+    }
+  }
 }
 
 /**
