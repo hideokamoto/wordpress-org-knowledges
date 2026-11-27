@@ -1,0 +1,26 @@
+{
+  "name": "wordpress-org-knowledges",
+  "displayName": "WordPress Developer Docs Search",
+  "version": "0.1.0",
+  "description": "Search and read the WordPress developer handbooks and code reference on developer.wordpress.org from Claude. Unofficial community project.",
+  "author": {
+    "name": "Hidetaka Okamoto",
+    "url": "https://github.com/hideokamoto"
+  },
+  "homepage": "https://github.com/hideokamoto/wordpress-org-knowledges#readme",
+  "repository": "https://github.com/hideokamoto/wordpress-org-knowledges",
+  "license": "MIT",
+  "keywords": ["wordpress", "documentation", "handbook", "code-reference", "plugin-development", "theme-development"],
+  "documentationUrl": "https://github.com/hideokamoto/wordpress-org-knowledges#readme",
+  "supportUrl": "https://github.com/hideokamoto/wordpress-org-knowledges/issues",
+  "privacyPolicyUrl": "https://github.com/hideokamoto/wordpress-org-knowledges/blob/main/PRIVACY.md",
+  "network": {
+    "hosts": ["developer.wordpress.org"]
+  },
+  "mcpServers": {
+    "wordpress-docs": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/packages/mcp-wordpress-docs/src/index.js"]
+    }
+  }
+}

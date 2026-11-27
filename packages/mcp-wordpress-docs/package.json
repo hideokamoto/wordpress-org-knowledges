@@ -2,27 +2,30 @@
   "name": "mcp-wordpress-docs",
   "version": "0.1.0",
   "description": "MCP server for searching WordPress developer documentation",
-  "main": "dist/index.js",
+  "type": "module",
+  "main": "src/index.js",
   "bin": {
-    "mcp-wordpress-docs": "dist/index.js"
+    "mcp-wordpress-docs": "src/index.js"
   },
+  "files": [
+    "src"
+  ],
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts"
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "start": "node src/index.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "turndown": "^7.1.2"
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "turndown": "7.2.5"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/turndown": "^5.0.5",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.0.0"
+    "@types/node": "22.20.7",
+    "@types/turndown": "5.0.6",
+    "typescript": "5.9.3"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "license": "MIT",
   "repository": {

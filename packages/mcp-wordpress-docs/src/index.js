@@ -1,5 +1,8 @@
 #!/usr/bin/env node
+// @ts-check
 
+import { readFileSync } from "node:fs";
+import * as https from "node:https";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -8,8 +11,12 @@ import {
   ErrorCode,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
-import * as https from "https";
 import TurndownService from "turndown";
+
+/** @type {{ name: string; version: string }} */
+const packageJson = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8")
+);
 
 // Constants
 const API_BASE_URL = "https://developer.wordpress.org/wp-json/wp/v2";
@@ -24,20 +31,29 @@ const HANDBOOK_SUBTYPES = [
   "apis-handbook",
   "wpcs-handbook",
   "adv-admin-handbook",
-] as const;
+];
 
 const CODE_REF_SUBTYPES = [
   "wp-parser-function",
   "wp-parser-hook",
   "wp-parser-class",
   "wp-parser-method",
-] as const;
+];
 
 const VALID_SUBTYPES = [...HANDBOOK_SUBTYPES, ...CODE_REF_SUBTYPES];
 
-type HandbookSubtype = (typeof HANDBOOK_SUBTYPES)[number];
-type CodeRefSubtype = (typeof CODE_REF_SUBTYPES)[number];
-type ValidSubtype = (typeof VALID_SUBTYPES)[number];
+/**
+ * Annotations shared by every tool. Both tools only send GET requests to
+ * developer.wordpress.org and never change anything, so they are read-only,
+ * non-destructive and idempotent. They reach an external website, so they are
+ * open-world.
+ */
+const READ_ONLY_ANNOTATIONS = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
+};
 
 // Turndown instance for HTML to Markdown conversion
 const turndownService = new TurndownService({
@@ -45,33 +61,89 @@ const turndownService = new TurndownService({
   codeBlockStyle: "fenced",
 });
 
-// HTTP request helper
-function httpsGet(url: string): Promise<string> {
+const USER_AGENT = `${packageJson.name}/${packageJson.version} (+https://github.com/hideokamoto/wordpress-org-knowledges)`;
+const MAX_RETRIES = 2;
+const MAX_RETRY_DELAY = 5000;
+
+/**
+ * Thrown when developer.wordpress.org answers 429 or 503, which are worth
+ * trying again after a short wait.
+ */
+class RetryableHttpError extends Error {
+  /** @param {string} message @param {number} delay */
+  constructor(message, delay) {
+    super(message);
+    this.delay = delay;
+  }
+}
+
+/**
+ * @param {string | string[] | undefined} header
+ * @param {number} fallback
+ * @returns {number}
+ */
+function retryDelay(header, fallback) {
+  const value = (Array.isArray(header) ? header[0] : header)?.trim() ?? "";
+  let delay = fallback;
+  if (/^\d+$/.test(value)) {
+    // Retry-After: <seconds>
+    delay = Number(value) * 1000;
+  } else if (value) {
+    // Retry-After: <HTTP-date>
+    const date = Date.parse(value);
+    if (Number.isFinite(date)) delay = Math.max(0, date - Date.now());
+  }
+  return Math.min(delay, MAX_RETRY_DELAY);
+}
+
+/**
+ * One HTTP GET request.
+ * @param {string} url
+ * @param {number} attempt
+ * @returns {Promise<string>}
+ */
+function httpsGetOnce(url, attempt) {
   return new Promise((resolve, reject) => {
-    const request = https.get(url, { timeout: REQUEST_TIMEOUT }, (response) => {
-      if (response.statusCode === 404) {
-        response.resume(); // Consume response to free up socket
-        reject(new Error(`Document not found (404): ${url}`));
-        return;
-      }
+    const request = https.get(
+      url,
+      { timeout: REQUEST_TIMEOUT, headers: { "User-Agent": USER_AGENT, Accept: "application/json" } },
+      (response) => {
+        const status = response.statusCode ?? 0;
+        if (status === 404) {
+          response.resume(); // Consume response to free up socket
+          reject(new Error(`Document not found (404): ${url}`));
+          return;
+        }
 
-      if (response.statusCode && response.statusCode >= 400) {
-        response.resume(); // Consume response to free up socket
-        reject(new Error(`HTTP error ${response.statusCode}: ${url}`));
-        return;
-      }
+        if (status === 429 || status === 503) {
+          response.resume();
+          reject(
+            new RetryableHttpError(
+              `HTTP error ${status}: developer.wordpress.org is limiting requests, try again later: ${url}`,
+              retryDelay(response.headers["retry-after"], 1000 * 2 ** attempt)
+            )
+          );
+          return;
+        }
 
-      let data = "";
-      response.on("data", (chunk) => {
-        data += chunk;
-      });
-      response.on("end", () => {
-        resolve(data);
-      });
-      response.on("error", (error) => {
-        reject(new Error(`Stream error: ${error.message} (${url})`));
-      });
-    });
+        if (status >= 400) {
+          response.resume(); // Consume response to free up socket
+          reject(new Error(`HTTP error ${status}: ${url}`));
+          return;
+        }
+
+        let data = "";
+        response.on("data", (chunk) => {
+          data += chunk;
+        });
+        response.on("end", () => {
+          resolve(data);
+        });
+        response.on("error", (error) => {
+          reject(new Error(`Stream error: ${error.message} (${url})`));
+        });
+      }
+    );
 
     request.on("error", (error) => {
       reject(new Error(`Network error: ${error.message} (${url})`));
@@ -84,40 +156,74 @@ function httpsGet(url: string): Promise<string> {
   });
 }
 
-// Validation helpers
-function isValidSubtype(subtype: string): subtype is ValidSubtype {
-  return VALID_SUBTYPES.includes(subtype as ValidSubtype);
+/**
+ * HTTP GET helper. Retries a 429 or 503 answer up to MAX_RETRIES times.
+ * @param {string} url
+ * @returns {Promise<string>}
+ */
+async function httpsGet(url) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await httpsGetOnce(url, attempt);
+    } catch (error) {
+      if (!(error instanceof RetryableHttpError) || attempt >= MAX_RETRIES) throw error;
+      await new Promise((resolve) => setTimeout(resolve, error.delay));
+    }
+  }
 }
 
-function isHandbookSubtype(subtype: string): subtype is HandbookSubtype {
-  return HANDBOOK_SUBTYPES.includes(subtype as HandbookSubtype);
+/**
+ * @param {string} subtype
+ * @returns {boolean}
+ */
+function isValidSubtype(subtype) {
+  return VALID_SUBTYPES.includes(subtype);
 }
 
-function isCodeRefSubtype(subtype: string): subtype is CodeRefSubtype {
-  return CODE_REF_SUBTYPES.includes(subtype as CodeRefSubtype);
+/**
+ * @param {string} subtype
+ * @returns {boolean}
+ */
+function isHandbookSubtype(subtype) {
+  return HANDBOOK_SUBTYPES.includes(subtype);
 }
 
-// Search result interface
-interface SearchResult {
-  id: number;
-  title: string;
-  url: string;
-  subtype: string;
+/**
+ * @param {string} subtype
+ * @returns {boolean}
+ */
+function isCodeRefSubtype(subtype) {
+  return CODE_REF_SUBTYPES.includes(subtype);
 }
 
-interface SearchApiResponse {
-  id: number;
-  title: string;
-  url: string;
-  subtype: string;
+/**
+ * Throws when a WordPress REST API response is an error object.
+ * @param {unknown} response
+ */
+function throwIfApiError(response) {
+  if (response && typeof response === "object" && "code" in response) {
+    const message =
+      "message" in response ? String(response.message) : String(response.code);
+    throw new Error(`API error: ${message}`);
+  }
 }
 
-// Tool: search_wordpress_docs
-async function searchWordPressDocs(
-  query: string,
-  subtypes?: string[],
-  perPage: number = 5
-): Promise<SearchResult[]> {
+/**
+ * @typedef {object} SearchResult
+ * @property {number} id
+ * @property {string} title
+ * @property {string} url
+ * @property {string} subtype
+ */
+
+/**
+ * Tool: search_wordpress_docs
+ * @param {string} query
+ * @param {string[]} [subtypes]
+ * @param {number} [perPage]
+ * @returns {Promise<SearchResult[]>}
+ */
+async function searchWordPressDocs(query, subtypes, perPage = 5) {
   // Validate subtypes if provided
   if (subtypes && subtypes.length > 0) {
     const invalidSubtypes = subtypes.filter((s) => !isValidSubtype(s));
@@ -159,12 +265,15 @@ async function searchWordPressDocs(
     }
 
     // Map results
-    return response.map((item: SearchApiResponse) => ({
-      id: item.id,
-      title: item.title,
-      url: item.url,
-      subtype: item.subtype,
-    }));
+    return response.map(
+      /** @param {SearchResult} item */
+      (item) => ({
+        id: item.id,
+        title: item.title,
+        url: item.url,
+        subtype: item.subtype,
+      })
+    );
   } catch (error) {
     if (error instanceof SyntaxError) {
       throw new Error(`Failed to parse API response: ${error.message}`);
@@ -173,30 +282,13 @@ async function searchWordPressDocs(
   }
 }
 
-// Handbook content response interface
-interface HandbookContent {
-  id: number;
-  title: { rendered: string };
-  content: { rendered: string };
-  excerpt: { rendered: string };
-  link: string;
-}
-
-// Code reference response interface
-interface CodeRefContent {
-  id: number;
-  title: { rendered: string };
-  excerpt: { rendered: string };
-  link: string;
-  "wp-parser-since"?: string[];
-  "wp-parser-source-file"?: string[];
-}
-
-// Tool: get_wordpress_doc_content
-async function getWordPressDocContent(
-  subtype: string,
-  id: number
-): Promise<object> {
+/**
+ * Tool: get_wordpress_doc_content
+ * @param {string} subtype
+ * @param {number} id
+ * @returns {Promise<object>}
+ */
+async function getWordPressDocContent(subtype, id) {
   // Validate subtype
   if (!isValidSubtype(subtype)) {
     throw new Error(
@@ -215,16 +307,8 @@ async function getWordPressDocContent(
 
     try {
       const responseText = await httpsGet(url);
-      const response: HandbookContent = JSON.parse(responseText);
-
-      // Check for error response
-      if ((response as unknown as { code?: string; message?: string }).code) {
-        const errorResponse = response as unknown as {
-          code: string;
-          message: string;
-        };
-        throw new Error(`API error: ${errorResponse.message}`);
-      }
+      const response = JSON.parse(responseText);
+      throwIfApiError(response);
 
       // Convert HTML content to Markdown
       const markdownContent = turndownService.turndown(
@@ -249,16 +333,8 @@ async function getWordPressDocContent(
 
     try {
       const responseText = await httpsGet(url);
-      const response: CodeRefContent = JSON.parse(responseText);
-
-      // Check for error response
-      if ((response as unknown as { code?: string; message?: string }).code) {
-        const errorResponse = response as unknown as {
-          code: string;
-          message: string;
-        };
-        throw new Error(`API error: ${errorResponse.message}`);
-      }
+      const response = JSON.parse(responseText);
+      throwIfApiError(response);
 
       // Convert HTML excerpt to Markdown
       const markdownExcerpt = turndownService.turndown(
@@ -287,8 +363,8 @@ async function getWordPressDocContent(
 // Create MCP server
 const server = new Server(
   {
-    name: "mcp-wordpress-docs",
-    version: "0.1.0",
+    name: packageJson.name,
+    version: packageJson.version,
   },
   {
     capabilities: {
@@ -303,14 +379,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "search_wordpress_docs",
+        title: "Search WordPress developer docs",
         description:
           "Search WordPress developer documentation including handbooks (Plugin, Theme, Block Editor, REST API, Common APIs, Coding Standards, Advanced Administration) and code references (functions, hooks, classes, methods). Returns a list of matching documents with IDs, titles, URLs, and types. Use this to find relevant documentation before retrieving full content.",
+        annotations: {
+          title: "Search WordPress developer docs",
+          ...READ_ONLY_ANNOTATIONS,
+        },
         inputSchema: {
           type: "object",
           properties: {
             query: {
               type: "string",
-              description: "Search keywords (e.g., 'register_post_type', 'custom post type', 'add_action')",
+              description:
+                "Search keywords (e.g., 'register_post_type', 'custom post type', 'add_action')",
             },
             subtypes: {
               type: "array",
@@ -333,8 +415,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "get_wordpress_doc_content",
+        title: "Get a WordPress doc page",
         description:
           "Retrieve the full content of a specific WordPress documentation page. For handbooks, returns the complete content in Markdown format. For code references (functions, hooks, classes, methods), returns the excerpt/description along with metadata like 'since' version and source file location. Use the ID and subtype from search_wordpress_docs results.",
+        annotations: {
+          title: "Get a WordPress doc page",
+          ...READ_ONLY_ANNOTATIONS,
+        },
         inputSchema: {
           type: "object",
           properties: {
@@ -361,21 +448,28 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     if (name === "search_wordpress_docs") {
-      const query = args?.query as string;
+      const query = args?.query;
 
       if (!query || typeof query !== "string") {
-        throw new McpError(ErrorCode.InvalidParams, "query is required and must be a string");
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          "query is required and must be a string"
+        );
       }
 
       // Validate subtypes
       const rawSubtypes = args?.subtypes;
-      let subtypes: string[] | undefined;
+      /** @type {string[] | undefined} */
+      let subtypes;
       if (rawSubtypes !== undefined) {
-        if (!Array.isArray(rawSubtypes)) {
-          throw new McpError(ErrorCode.InvalidParams, "subtypes must be an array of strings");
-        }
-        if (!rawSubtypes.every((s): s is string => typeof s === "string")) {
-          throw new McpError(ErrorCode.InvalidParams, "subtypes must be an array of strings");
+        if (
+          !Array.isArray(rawSubtypes) ||
+          !rawSubtypes.every((s) => typeof s === "string")
+        ) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            "subtypes must be an array of strings"
+          );
         }
         // Validate each subtype value
         const invalidSubtypes = rawSubtypes.filter((s) => !isValidSubtype(s));
@@ -393,10 +487,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       let perPage = 5;
       if (rawPerPage !== undefined) {
         if (typeof rawPerPage !== "number" || !Number.isFinite(rawPerPage)) {
-          throw new McpError(ErrorCode.InvalidParams, "per_page must be a finite number");
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            "per_page must be a finite number"
+          );
         }
-        if (!Number.isInteger(rawPerPage) || rawPerPage < 1 || rawPerPage > 100) {
-          throw new McpError(ErrorCode.InvalidParams, "per_page must be an integer between 1 and 100");
+        if (
+          !Number.isInteger(rawPerPage) ||
+          rawPerPage < 1 ||
+          rawPerPage > 100
+        ) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            "per_page must be an integer between 1 and 100"
+          );
         }
         perPage = rawPerPage;
       }
@@ -414,11 +518,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (name === "get_wordpress_doc_content") {
-      const subtype = args?.subtype as string;
-      const id = args?.id as number;
+      const subtype = args?.subtype;
+      const id = args?.id;
 
       if (!subtype || typeof subtype !== "string") {
-        throw new McpError(ErrorCode.InvalidParams, "subtype is required and must be a string");
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          "subtype is required and must be a string"
+        );
       }
 
       // Validate subtype value
@@ -430,12 +537,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       if (id === undefined || id === null || typeof id !== "number") {
-        throw new McpError(ErrorCode.InvalidParams, "id is required and must be a number");
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          "id is required and must be a number"
+        );
       }
 
       // Validate id is a positive integer
       if (!Number.isInteger(id) || id < 1) {
-        throw new McpError(ErrorCode.InvalidParams, "id must be a positive integer");
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          "id must be a positive integer"
+        );
       }
 
       const content = await getWordPressDocContent(subtype, id);

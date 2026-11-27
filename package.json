@@ -1,0 +1,17 @@
+{
+  "name": "wordpress-org-knowledges",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Claude plugin bundle: WordPress developer documentation search (MCP server and Agent Skills)",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "verify:plugin": "node scripts/verify-plugin.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "turndown": "7.2.5"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "wordpress-org-knowledges",
+  "description": "WordPress developer documentation search for Claude Code (MCP server and Agent Skills)",
+  "owner": {
+    "name": "Hidetaka Okamoto",
+    "url": "https://github.com/hideokamoto"
+  },
+  "plugins": [
+    {
+      "name": "wordpress-org-knowledges",
+      "source": "./"
+    }
+  ]
+}
