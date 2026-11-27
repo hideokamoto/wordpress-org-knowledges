@@ -83,8 +83,16 @@ class RetryableHttpError extends Error {
  * @returns {number}
  */
 function retryDelay(header, fallback) {
-  const seconds = Number(Array.isArray(header) ? header[0] : header);
-  const delay = Number.isFinite(seconds) && seconds >= 0 ? seconds * 1000 : fallback;
+  const value = (Array.isArray(header) ? header[0] : header)?.trim() ?? "";
+  let delay = fallback;
+  if (/^\d+$/.test(value)) {
+    // Retry-After: <seconds>
+    delay = Number(value) * 1000;
+  } else if (value) {
+    // Retry-After: <HTTP-date>
+    const date = Date.parse(value);
+    if (Number.isFinite(date)) delay = Math.max(0, date - Date.now());
+  }
   return Math.min(delay, MAX_RETRY_DELAY);
 }
 

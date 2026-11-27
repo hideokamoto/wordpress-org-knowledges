@@ -29,7 +29,7 @@ On Claude Code versions older than 2.1.275, add the marketplace first:
 /plugin install wordpress-org-knowledges@wordpress-org-knowledges
 ```
 
-The plugin needs Node.js 18 or later on your `PATH`. When Claude Code installs the plugin, it installs the server's npm dependencies from the lockfile in this repository, so there is no separate build or `npx` download.
+The plugin needs Node.js 20 or later on your `PATH` for the MCP server, and Python 3 as `python3` for the two Agent Skills. When Claude Code installs the plugin, it installs the server's npm dependencies from the lockfile in this repository, so there is no separate build or `npx` download.
 
 ### For Kiro IDE Users
 
@@ -40,7 +40,7 @@ Install the WordPress Docs power from the Powers panel.
 Ask Claude questions like these after installing the plugin:
 
 1. "How do I register a custom post type in WordPress?" Claude searches the Plugin Handbook and reads the matching page.
-2. "What parameters does wp_insert_post accept, and since which version is it available?" Claude looks up the function in the code reference and reads its description, `since` version and source file.
+2. "What does wp_insert_post do, and since which version is it available?" Claude looks up the function in the code reference and reads its description, `since` version and source file. The tool does not return the full parameter list; Claude gives you the function's page URL on developer.wordpress.org for that.
 3. "Explain the template hierarchy in WordPress themes." Claude searches the Theme Handbook and summarizes the page.
 4. "Which hook should I use to enqueue scripts in the block editor?" Claude searches the hooks reference and the Block Editor Handbook.
 
@@ -161,6 +161,7 @@ claude mcp add wordpress-docs node -- /path/to/packages/mcp-wordpress-docs/src/i
 The root `package.json` lists the server's runtime dependencies, which Claude Code installs from `package-lock.json` when it installs the plugin. Keep them identical to `packages/mcp-wordpress-docs/package.json`. CI checks this, validates the manifest, and starts the server the way Claude Code does:
 
 ```bash
+cd /path/to/wordpress-org-knowledges   # run from the repository root
 npm ci --omit=dev --ignore-scripts
 npx -y @anthropic-ai/claude-code@2.1.332 plugin validate .
 npm run verify:plugin -- --live

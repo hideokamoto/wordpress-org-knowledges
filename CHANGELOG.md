@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Node.js 20 or later is required, because `@modelcontextprotocol/sdk` 1.32.2 depends on `@hono/node-server`, which requires Node.js 20
 - The MCP server source is now plain JavaScript (`src/index.js`, type-checked with `checkJs`) so the plugin runs it without a build step
 - Updated `@modelcontextprotocol/sdk` to 1.32.2 and `turndown` to 7.2.5, pinned to exact versions
 - The server reports its name and version from `package.json`
