@@ -21,9 +21,22 @@ jobs:
         working-directory: packages/mcp-wordpress-docs
         run: npm ci
 
-      - name: Build MCP server
+      - name: Type-check MCP server
         working-directory: packages/mcp-wordpress-docs
-        run: npm run build
+        run: npm run typecheck
+
+      - name: Install plugin dependencies the way Claude Code does
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: Validate Claude plugin manifest
+        run: npx -y @anthropic-ai/claude-code@2.1.332 plugin validate .
+
+      - name: Verify plugin MCP server
+        # Remove the package's own node_modules so the server resolves its
+        # dependencies from the plugin root, as it does once installed.
+        run: |
+          rm -rf packages/mcp-wordpress-docs/node_modules
+          npm run verify:plugin -- --live
 
       - name: Validate skills structure
         run: |
